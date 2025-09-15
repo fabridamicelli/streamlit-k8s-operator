@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+
+"""Kubernetes charm for a streamlit app."""
+
+import ops
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+class StreamlitCharm(ops.CharmBase):
+    """Charm the service."""
+
+    def __init__(self, framework: ops.Framework) -> None:
+        super().__init__(framework)
+        self.pebble_service_name = 'streamlit-service'
+        framework.observe(self.on.streamlit_server_pebble_ready, self._on_streamlit_server_pebble_ready)
+
+
+    def _on_streamlit_server_pebble_ready(self, event: ops.PebbleReadyEvent) -> None:
+        """Define and start a workload using the Pebble API.
+
+        Change this example to suit your needs. You'll need to specify the right entrypoint and
+        environment configuration for your specific workload.
+
+        Learn more about interacting with Pebble at
+            https://documentation.ubuntu.com/ops/latest/reference/pebble/
+        Learn more about Pebble layers at
+            https://documentation.ubuntu.com/pebble/how-to/use-layers/
+        """
+        # Get a reference the container attribute on the PebbleReadyEvent
+        container = event.workload
+        # Add initial Pebble config layer using the Pebble API
+        container.add_layer('streamlit', self._get_pebble_layer(), combine=True)
+        # Make Pebble reevaluate its plan, ensuring any services are started if enabled.
+        container.replan()
+        # Learn more about statuses at
+        # https://documentation.ubuntu.com/juju/3.6/reference/status/
+        self.unit.status = ops.ActiveStatus()
+
+    def _get_pebble_layer(self) -> ops.pebble.Layer:
+        """Pebble layer for the FastAPI demo services."""
+        command = " ". join(
+            ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+        )
+        pebble_layer: ops.pebble.LayerDict = {
+            'summary': 'Streamlit service',
+            'description': 'pebble config layer for Streamlit server',
+            'services': {
+                self.pebble_service_name: {
+                    'override': 'replace',
+                    'summary': 'streamlit',
+                    'command': command,
+                    'startup': 'enabled',
+                }
+            },
+        }
+        return ops.pebble.Layer(pebble_layer)
+
+
+if __name__ == '__main__':  # pragma: nocover
+    ops.main(StreamlitCharm)

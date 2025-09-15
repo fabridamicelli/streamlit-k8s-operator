@@ -1,0 +1,47 @@
+name: streamlit-charm
+title: |
+  streamlit-k8s
+description: |
+  Simple Streamlit dashboard 
+summary: |
+  Simple Streamlit dashboard for Kubernetes
+
+type: charm
+
+
+requires:
+  ingress:
+    interface: ingress
+    limit: 1
+
+base: ubuntu@24.04
+
+platforms:
+  amd64:
+
+
+charm-libs:
+- lib: traefik-k8s.ingress
+  version: '2'
+
+parts:
+  my-charm:
+    plugin: uv
+    source: .
+    build-snaps:
+      - astral-uv
+
+containers:
+  streamlit-server:
+    resource: streamlit-server-image
+
+resources:
+  # An OCI image resource for each container listed above.
+  # You may remove this if your charm will run without a workload sidecar container.
+  streamlit-server-image:
+    type: oci-image
+    description: OCI image from GitHub Container Repository
+    # The upstream-source field is ignored by Juju. It is included here as a reference
+    # so the integration testing suite knows which image to deploy during testing. This field
+    # is also used by the 'canonical/charming-actions' GitHub action for automated releasing.
+    upstream-source: docker.io/library/streamlit-server-image
